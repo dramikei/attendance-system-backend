@@ -1,6 +1,7 @@
 import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from passlib.hash import sha256_crypt
 # import User
 
 app = Flask(__name__)
@@ -27,7 +28,8 @@ class User(db.Model):
 @app.route('/add', methods=['POST'])
 def demo():
     json = request.json
-    user = User(json['enrolment'],json['name'],json['password'],json['batch'])
+    password = sha256_crypt.hash(json['password'])
+    user = User(json['enrolment'],json['name'],password,json['batch'])
     db.session.add(user)
     db.session.commit()
     return jsonify("Success")
