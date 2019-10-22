@@ -2,6 +2,9 @@ import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
+
+############### Setup ###############
+
 app = Flask(__name__)
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -10,57 +13,102 @@ app.config["SQLALCHEMY_DATABASE_URI"] = database_file
 db = SQLAlchemy(app)
 
 
+############### Models ###############
+
 class User(db.Model):
     __tablename__ = 'user'
     enrolment = db.Column(db.String(20), nullable=False, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     password = db.Column(db.String(255), nullable=False)
     batch = db.Column(db.String(10))
-    timetable = db.relationship("TimeTable", backref="User")
+    # timetable = db.relationship("TimeTable", backref="User")
 
     def __init__(self, enrolment, name, password, batch):
         self.enrolment = enrolment
         self.name = name
         self.password = password
         self.batch = batch
+    def serialize(self):
+        return {
+            'enrolment': self.enrolment, 
+            'name': self.name,
+            'batch': self.batch
+            # 'timetable':self.timetable
+        }
 
 class TimeTable(db.Model):
     __tablename__ = 'timetable'
+    id = db.Column(db.Integer, primary_key=True)
     day = db.Column(db.String(10), nullable = False)
-    batch = db.Column(db.String(10), primary_key=True)
+    batch = db.Column(db.String(10))
     teacherName = db.Column(db.String(255), nullable = False)
     hallName = db.Column(db.String(40), nullable = False)
     time = db.Column(db.String(25), nullable = False)
     subject = db.Column(db.String(30), nullable = False)
     enrolment = db.Column(db.String(20), db.ForeignKey('user.enrolment'))
-    hall = db.relationship("LectureHall", backref="TimeTable")
+    # hall = db.relationship("LectureHall", backref="TimeTable")
 
     def __init__(self,day,batch,teacherName,hallName,time,subject):
         self.day = day
-        self,batch = batch
+        self.batch = batch
         self.teacherName = teacherName
         self.hallName = hallName
         self.time = time
         self.subject = subject
 
+    def serialize(self):
+        return {
+            'day': self.day, 
+            'batch': self.batch,
+            'teacherName': self.teacherName,
+            'hallName': self.hallName,
+            'time': self.time,
+            'subject': self.subject
+        }
+
 class LectureHall(db.Model):
     __tablename__ = 'lecturehall'
     name = db.Column(db.String(40), primary_key = True)
     macAddress = db.Column(db.Text, nullable = False)
-    batch = db.Column(db.String(10), db.ForeignKey('timetable.batch'))
+    table_id = db.Column(db.String(10), db.ForeignKey('timetable.id'))
 
     def __init__(self,name,address):
         self.name = name
         self.macAddress = address
+    def serialize(self):
+        return {
+            'name': self.name,
+            'macaddress': self.macAddress
+        }
+
+############### Routes ###############
+# Routes required: getTimeTable(), login, 
+
+@app.route('/timetable', methods=['POST'])
+def getTimeTable():
+    json = request.json
+    enrolment = json['enrolment']
+    data = db.session.query(TimeTable).join(User, enrolment == User.enrolment).all()
+    print("length: ",len(data))
+    response = []
+    for row in data:
+        response.append(row.serialize())
+    return jsonify(response)
 
 
-# @app.route('/add', methods=['POST'])
-# def demo():
-#     json = request.json
-#     user = User(json['enrolment'],json['name'],json['password'],json['batch'])
-#     db.session.add(user)
-#     db.session.commit()
-#     return jsonify({"Success"})
+@app.route('/login', methods=['POST'])
+def login():
+    # TODO: add authorization
+    json = request.json
+    enrolment = json['enrolment']
+    password = json['password']
+    isValid = False
+    data = db.session.query(User).filter(User.enrolment == enrolment).all()
+    for user in data:
+        if user.password == password:
+            isValid = True
+            break
+    return jsonify(isValid)
 
 if __name__ == '__main__':
     app.run(debug=True)
