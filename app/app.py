@@ -1,6 +1,7 @@
 import os
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 
 ############### Setup ###############
@@ -109,6 +110,17 @@ def login():
             isValid = True
             break
     return jsonify(isValid)
+
+@app.route('/markAttendance', methods=['POST'])
+def markAttendance():
+    json = request.json
+    enrolment = json['enrolment']
+    macAddress = json['macaddress']
+    subject = json['subject']
+    data = db.session.query(TimeTable).filter(TimeTable.enrolment == enrolment, TimeTable.subject == subject).all()
+    for timetable in data:
+        print(timetable)
+    return jsonify("Testing")
 
 if __name__ == '__main__':
     app.run(debug=True)
