@@ -37,6 +37,31 @@ class User(db.Model):
             # 'timetable':self.timetable
         }
 
+class Attendance(db.Model):
+    __tablename__ = 'attendance'
+    enrolment = db.Column(db.String(20), nullable=False, primary_key=True)
+    date = db.Column(db.String(15), nullable = False)
+    subject = db.Column(db.String(30), nullable = False)
+    # isattendanceon = db.Column(db.Boolean(), nullable = False)
+    ispresent = db.Column(db.String(6), nullable = False)
+    table_id = db.Column(db.String(10), db.ForeignKey('timetable.id'))
+
+    def __init__(self,enrolment,date,subject,ispresent,table_id):
+        self.enrolment = enrolment
+        self.date = date
+        self.subject = subject
+        self.ispresent = ispresent
+        self.table_id = table_id
+    
+    def serialize(self):
+        return {
+            'enrolment': self.enrolment,
+            'date': self.date,
+            'subject': self.subject,
+            'ispresent': self.ispresent,
+            'table_id': self.table_id
+        }
+
 class TimeTable(db.Model):
     __tablename__ = 'timetable'
     id = db.Column(db.Integer, primary_key=True)
@@ -47,8 +72,6 @@ class TimeTable(db.Model):
     time = db.Column(db.String(25), nullable = False)
     subject = db.Column(db.String(30), nullable = False)
     enrolment = db.Column(db.String(20), db.ForeignKey('user.enrolment'))
-    isattendanceon = db.Column(db.String(6), nullable = False)
-    ispresent = db.Column(db.String(6), nullable = False)
     # hall = db.relationship("LectureHall", backref="TimeTable")
 
     def __init__(self,day,batch,teacherName,hallName,time,subject):
@@ -113,20 +136,35 @@ def login():
             break
     return jsonify(isValid)
 
+
+@app.route('/getAttendance', methods=['POST'])
+def getAttendance():
+    json = request.json
+    enrolment = json['enrolment']
+    subject = json['subject']
+
 @app.route('/markAttendance', methods=['POST'])
 def markAttendance():
     json = request.json
     enrolment = json['enrolment']
     macAddress = json['macaddress']
     subject = json['subject']
+    date = datetime.now()
+    day = date.strftime('%d')
+    year = date.strftime('%Y')
+    month = date.strftime('%m')
+    today = "{}_{}_{}".format(year,month,day)
+    print(today)
     timetable_id = 0
     isAttendanceOn = False
     isMacCorrect = False
-    data = db.session.query(TimeTable).filter(TimeTable.enrolment == enrolment).filter(TimeTable.subject == subject).all()
-    for timetable in data:
-        if timetable.isattendanceon == "True" or timetable.isattendanceon == "true":
-            isAttendanceOn = True
-            timetable_id = timetable.id
+    data = db.session.query(Attendance).filter(Attendance.enrolment == enrolment).filter(Attendance.subject == subject).filter(Attendance.date == today).all()
+    
+    for attendance in data:
+        # Loop to check if attendance is on (i.e exists)
+        isAttendanceOn = True
+        timetable_id = attendance.table_id
+
     if isAttendanceOn:
         #mark attendance
         data = db.session.query(LectureHall).filter(LectureHall.table_id == timetable_id).all()
@@ -142,10 +180,12 @@ def markAttendance():
         return jsonify({
             "error": "attendance not on."
         }), 403
+
+
     if isMacCorrect:
         #Finally, mark attendance
         try:
-            db.session.query(TimeTable).filter(TimeTable.id == timetable_id).update({'ispresent':'True'})
+            db.session.query(Attendance).filter(Attendance.subject == subject).filter(Attendance.date == today).update({'ispresent':'True'})
             db.session.commit()
             return jsonify('Success'), 200
         except:
