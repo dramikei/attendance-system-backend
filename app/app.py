@@ -84,7 +84,7 @@ class LectureHall(db.Model):
         }
 
 ############### Routes ###############
-# Routes required: getTimeTable(), login, 
+# Routes required: getTimeTable(), login, markAttendance(), 
 
 @app.route('/timetable', methods=['POST'])
 def getTimeTable():
@@ -118,10 +118,36 @@ def markAttendance():
     enrolment = json['enrolment']
     macAddress = json['macaddress']
     subject = json['subject']
+    timetable_id = 0
+    isAttendanceOn = False
+    isMacCorrect = False
     data = db.session.query(TimeTable).filter(TimeTable.enrolment == enrolment, TimeTable.subject == subject).all()
     for timetable in data:
-        print(timetable)
-    return jsonify("Testing")
+        if timetable.isAttendanceOn == "True" or timetable.isAttendanceOn == "true":
+            isAttendanceOn = True
+            timetable_id = timetable.id
+    if isAttendanceOn:
+        #mark attendance
+        data = db.session.query(LectureHall).filter(LectureHall.table_id == timetable_id).all()
+        for hall in data:
+            #Will only loop once
+            macaddress = hall.macAddress.split(";")
+            for mac in macaddress:
+                if macAddress == mac:
+                    isMacCorrect = True
+                else:
+                    continue
+    else:
+        return jsonify({
+            "error": "attendance not on."
+        }), 403
+    if isMacCorrect:
+        #Finally, mark attendance
+        pass
+    else:
+        return jsonify({
+            "error": "wrong macaddress"
+        }), 403
 
 if __name__ == '__main__':
     app.run(debug=True)
