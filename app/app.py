@@ -108,7 +108,7 @@ class LectureHall(db.Model):
         }
 
 ############### Routes ###############
-# Routes required: getTimeTable(), login, markAttendance(), 
+# Routes required: getTimeTable(), login, markAttendance(), getAttendance(),
 
 @app.route('/timetable', methods=['POST'])
 def getTimeTable():
@@ -142,6 +142,11 @@ def getAttendance():
     json = request.json
     enrolment = json['enrolment']
     subject = json['subject']
+    data = db.session.query(Attendance).filter(Attendance.enrolment == enrolment).filter(Attendance.subject == subject).all()
+    response = []
+    for attendance in data:
+        response.append(attendance.serialize())
+    return jsonify(response)
 
 @app.route('/markAttendance', methods=['POST'])
 def markAttendance():
@@ -154,7 +159,6 @@ def markAttendance():
     year = date.strftime('%Y')
     month = date.strftime('%m')
     today = "{}_{}_{}".format(year,month,day)
-    print(today)
     timetable_id = 0
     isAttendanceOn = False
     isMacCorrect = False
