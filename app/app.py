@@ -48,6 +48,7 @@ class TimeTable(db.Model):
     subject = db.Column(db.String(30), nullable = False)
     enrolment = db.Column(db.String(20), db.ForeignKey('user.enrolment'))
     isAttendanceOn = db.Column(db.String(6), nullable = False)
+    isPresent = db.Column(db.String(6), nullable = False)
     # hall = db.relationship("LectureHall", backref="TimeTable")
 
     def __init__(self,day,batch,teacherName,hallName,time,subject):
