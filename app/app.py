@@ -47,8 +47,8 @@ class TimeTable(db.Model):
     time = db.Column(db.String(25), nullable = False)
     subject = db.Column(db.String(30), nullable = False)
     enrolment = db.Column(db.String(20), db.ForeignKey('user.enrolment'))
-    isAttendanceOn = db.Column(db.String(6), nullable = False)
-    isPresent = db.Column(db.String(6), nullable = False)
+    isattendanceon = db.Column(db.String(6), nullable = False)
+    ispresent = db.Column(db.String(6), nullable = False)
     # hall = db.relationship("LectureHall", backref="TimeTable")
 
     def __init__(self,day,batch,teacherName,hallName,time,subject):
@@ -122,9 +122,9 @@ def markAttendance():
     timetable_id = 0
     isAttendanceOn = False
     isMacCorrect = False
-    data = db.session.query(TimeTable).filter(TimeTable.enrolment == enrolment, TimeTable.subject == subject).all()
+    data = db.session.query(TimeTable).filter(TimeTable.enrolment == enrolment).filter(TimeTable.subject == subject).all()
     for timetable in data:
-        if timetable.isAttendanceOn == "True" or timetable.isAttendanceOn == "true":
+        if timetable.isattendanceon == "True" or timetable.isattendanceon == "true":
             isAttendanceOn = True
             timetable_id = timetable.id
     if isAttendanceOn:
@@ -144,10 +144,17 @@ def markAttendance():
         }), 403
     if isMacCorrect:
         #Finally, mark attendance
-        pass
+        try:
+            db.session.query(TimeTable).filter(TimeTable.id == timetable_id).update({'ispresent':'True'})
+            db.session.commit()
+            return jsonify('Success'), 200
+        except:
+            return jsonify({
+                'error': 'cannot mark attendance'
+            }), 500
     else:
         return jsonify({
-            "error": "wrong macaddress"
+            "error": "wrong mac-address"
         }), 403
 
 if __name__ == '__main__':
