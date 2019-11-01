@@ -119,7 +119,9 @@ def getTimeTable():
     response = []
     for row in data:
         response.append(row.serialize())
-    return jsonify(response)
+    return jsonify({
+        "timetables": response
+        })
 
 
 @app.route('/login', methods=['POST'])
@@ -134,7 +136,10 @@ def login():
         if user.password == password:
             isValid = True
             break
-    return jsonify(isValid)
+    response = {
+        "result": str(isValid)
+    }
+    return jsonify(response)
 
 
 @app.route('/getAttendance', methods=['POST'])
@@ -170,7 +175,7 @@ def markAttendance():
         timetable_id = attendance.table_id
 
     if isAttendanceOn:
-        #mark attendance
+        #check mac-address
         data = db.session.query(LectureHall).filter(LectureHall.table_id == timetable_id).all()
         for hall in data:
             #Will only loop once
