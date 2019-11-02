@@ -42,14 +42,15 @@ class Attendance(db.Model):
     enrolment = db.Column(db.String(20), nullable=False, primary_key=True)
     date = db.Column(db.String(15), nullable = False)
     subject = db.Column(db.String(30), nullable = False)
-    # isattendanceon = db.Column(db.Boolean(), nullable = False)
+    isattendanceon = db.Column(db.String(6), nullable = False)
     ispresent = db.Column(db.String(6), nullable = False)
     table_id = db.Column(db.String(10), db.ForeignKey('timetable.id'))
 
-    def __init__(self,enrolment,date,subject,ispresent,table_id):
+    def __init__(self,enrolment,date,subject,isattendanceon,ispresent,table_id):
         self.enrolment = enrolment
         self.date = date
         self.subject = subject
+        self.isattendanceon = isattendanceon
         self.ispresent = ispresent
         self.table_id = table_id
     
@@ -58,6 +59,7 @@ class Attendance(db.Model):
             'enrolment': self.enrolment,
             'date': self.date,
             'subject': self.subject,
+            'isattendanceon': self.isattendanceon,
             'ispresent': self.ispresent,
             'table_id': self.table_id
         }
@@ -151,7 +153,9 @@ def getAttendance():
     response = []
     for attendance in data:
         response.append(attendance.serialize())
-    return jsonify(response)
+    return jsonify({
+        "attendances":response
+        })
 
 @app.route('/markAttendance', methods=['POST'])
 def markAttendance():
@@ -171,11 +175,14 @@ def markAttendance():
     
     for attendance in data:
         # Loop to check if attendance is on (i.e exists)
-        isAttendanceOn = True
+        print("Attendance is on: ",attendance.isattendanceon)
+        if attendance.isattendanceon == "True" or attendance.isattendanceon == "true":
+            isAttendanceOn = True
         timetable_id = attendance.table_id
-
+    print("Attendance is on: ",isAttendanceOn)
     if isAttendanceOn:
         #check mac-address
+        print(isAttendanceOn)
         data = db.session.query(LectureHall).filter(LectureHall.table_id == timetable_id).all()
         for hall in data:
             #Will only loop once
@@ -187,23 +194,26 @@ def markAttendance():
                     continue
     else:
         return jsonify({
-            "error": "attendance not on."
+            "result": "attendance not on."
         }), 403
 
 
     if isMacCorrect:
         #Finally, mark attendance
+        
         try:
             db.session.query(Attendance).filter(Attendance.subject == subject).filter(Attendance.date == today).update({'ispresent':'True'})
             db.session.commit()
-            return jsonify('Success'), 200
+            return jsonify({
+                "result": 'Success'
+                }), 200
         except:
             return jsonify({
-                'error': 'cannot mark attendance'
+                'result': 'cannot mark attendance'
             }), 500
     else:
         return jsonify({
-            "error": "wrong mac-address"
+            "result": "wrong mac-address"
         }), 403
 
 if __name__ == '__main__':
