@@ -39,7 +39,8 @@ class User(db.Model):
 
 class Attendance(db.Model):
     __tablename__ = 'attendance'
-    enrolment = db.Column(db.String(20), nullable=False, primary_key=True)
+    id = db.Column(db.String(100), nullable=False, primary_key = True)
+    enrolment = db.Column(db.String(20), nullable=False)
     date = db.Column(db.String(15), nullable = False)
     subject = db.Column(db.String(30), nullable = False)
     isattendanceon = db.Column(db.String(6), nullable = False)
